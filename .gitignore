@@ -1,0 +1,24 @@
+﻿# 1. API 키 및 환경 변수
+.env
+.env.*
+*.env
+
+# 2. 모든 하위 경로의 가상환경 폴더
+**/ch02_env/**
+**/ch03_env/**
+**/*env/**
+**/*_env/**
+**/.venv/**
+**/venv/**
+
+# 3. 파이썬 캐시
+**/__pycache__/**
+**/*.pyc
+
+# 4. 로컬 벡터 DB 및 인덱스
+**/chroma_db/**
+**/*chroma*/**
+**/*.index
+**/*.faiss
+**/*.sqlite3
+**/*.pkl
