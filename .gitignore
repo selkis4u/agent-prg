@@ -22,3 +22,5 @@
 **/*.faiss
 **/*.sqlite3
 **/*.pkl
+**/db_*/**
+**/chroma.sqlite3
