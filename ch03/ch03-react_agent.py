@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_core.tools import create_retriever_tool
 from langchain_core.prompts import PromptTemplate
 
@@ -141,6 +141,9 @@ Final Answer: 원래 입력된 질문에 대한 최종 답변 (한글로 작성�
 
 ## 추가적인 주의사항
 - 반드시 [Thought -> Action -> Action Input -> Observation] 순서를 준수하십시오. 항상 Action 전에는 Thought가 먼저 나와야 합니다.
+- 필요한 정보를 충분히 얻었다면 절대 'Action: 없음'이나 임의의 도구를 작성하지 마십시오.
+- 정보를 확보한 즉시 'Thought: 이제 최종 답변을 알겠습니다'에 이어 바로 'Final Answer:'를 작성하여 종료하십시오.
+- 동일한 키워드로 도구를 반복 호출하지 마십시오. 원하는 정보가 없으면 검색어를 영어(예: "market size", "market volume")로 바꾸거나 다른 도구를 시도하십시오.
 - 최종 답변에는 최대한 많은 내용을 포함하십시오.
 - 한 번의 검색으로 해결되지 않을 것 같다면 문제를 분할하여 푸는 것도 고려하십시오.
 - 정보가 취합되었다면 불필요하게 사이클을 반복하지 마십시오.
@@ -183,20 +186,53 @@ ACTION_RE = re.compile(r"^Action\s*:\s*(?P<tool>.+?)\s*$", re.MULTILINE)
 ACTION_INPUT_RE = re.compile(r"^Action Input\s*:\s*(?P<input>.+?)\s*$", re.MULTILINE)
 FINAL_ANSWER_RE = re.compile(r"Final Answer\s*:\s*(?P<final>[\s\S]+)$", re.IGNORECASE)
 
-def _parse_action_and_input(text: str) -> Tuple[Optional[str], Optional[str]]:
-    m_act = ACTION_RE.search(text)
-    m_in = ACTION_INPUT_RE.search(text)
-    if m_act and m_in:
-        tool = m_act.group("tool").strip()
-        action_input = m_in.group("input").strip()
-        action_input_first_line = action_input.splitlines()[0].strip().strip('"').strip("'")
-        return tool, action_input_first_line
 
+def _parse_action_and_input(text: str) -> Tuple[Optional[str], Optional[str]]:
+    # 1. 텍스트 안에 'Final Answer:'가 있으면 무조건 최우선으로 즉시 종료 처리!
     m_final = FINAL_ANSWER_RE.search(text)
     if m_final:
         return "__FINAL__", m_final.group("final").strip()
 
-    return None, None
+    # 2. Final Answer가 없을 때만 Action 및 Action Input 탐색
+    m_act = ACTION_RE.search(text)
+    m_in = ACTION_INPUT_RE.search(text)
+    if m_act and m_in:
+        tool = m_act.group("tool").strip()
+        action_input = (
+            m_in.group("input").strip().splitlines()[0].strip().strip('"\'')
+        )
+
+        # 3. 모델이 'Action: 없음', 'none', '완료' 등을 뱉었을 때 에러 내지 않고 강제 종료
+        if tool.lower() in [
+            "없음",
+            "none",
+            "n/a",
+            "finish",
+            "종료",
+            "완료",
+        ]:
+            return (
+                "__FINAL__",
+                text,
+            )  # 파싱 실패로 되돌리지 않고 종료로 넘김
+
+        return tool, action_input    
+
+# def _parse_action_and_input(text: str) -> Tuple[Optional[str], Optional[str]]:
+#     m_act = ACTION_RE.search(text)
+#     m_in = ACTION_INPUT_RE.search(text)
+#     if m_act and m_in:
+#         tool = m_act.group("tool").strip()
+#         action_input = m_in.group("input").strip()
+#         action_input_first_line = action_input.splitlines()[0].strip().strip('"').strip("'")
+#         return tool, action_input_first_line
+
+#     m_final = FINAL_ANSWER_RE.search(text)
+#     if m_final:
+#         return "__FINAL__", m_final.group("final").strip()
+
+#     return None, None
+
 
 def _observation_to_text(observation_obj) -> str:
     if isinstance(observation_obj, list):
