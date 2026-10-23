@@ -218,21 +218,6 @@ def _parse_action_and_input(text: str) -> Tuple[Optional[str], Optional[str]]:
 
         return tool, action_input    
 
-# def _parse_action_and_input(text: str) -> Tuple[Optional[str], Optional[str]]:
-#     m_act = ACTION_RE.search(text)
-#     m_in = ACTION_INPUT_RE.search(text)
-#     if m_act and m_in:
-#         tool = m_act.group("tool").strip()
-#         action_input = m_in.group("input").strip()
-#         action_input_first_line = action_input.splitlines()[0].strip().strip('"').strip("'")
-#         return tool, action_input_first_line
-
-#     m_final = FINAL_ANSWER_RE.search(text)
-#     if m_final:
-#         return "__FINAL__", m_final.group("final").strip()
-
-#     return None, None
-
 
 def _observation_to_text(observation_obj) -> str:
     if isinstance(observation_obj, list):
@@ -299,3 +284,15 @@ try:
     print(out1["log"])
 except Exception as e:
     print(f"단건 질의 중 오류: {e}")
+
+# =========================
+# 멀티 쿼리
+# =========================
+try:
+    q2 = "미국과 일본의 ICT 주요 정책의 공통점과 차이점을 설명해주고 미국의 블록체인 스타트업 지원 제도를 정리해 주세요."
+    out2 = run_react(q2, max_iters=10)
+    print("최종 답변:", out2["output"])
+    print("\n=== 실행 로그 (Thought / Action / Action Input / Observation) ===\n")
+    print(out2["log"])
+except Exception as e:
+    print(f"멀티 쿼리 중 오류: {e}")
