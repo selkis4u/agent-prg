@@ -76,7 +76,7 @@ def create_pdf_retriever(
     )
     return vectorstore.as_retriever()
 
-
+# 일본 ICT 정책 데이터베이스 생성
 retriever_ict_japan = create_pdf_retriever(
     pdf_path="ict_japan_2024.pdf",
     persist_directory="db_ict_policy_japan_2024",
@@ -96,7 +96,6 @@ retriever_blockchain_usa = create_pdf_retriever(
     persist_directory="db_blockchain_usa_2025",
     embedding_model=embd
 )
-
 
 
 ict_japan_engine = create_retriever_tool(
@@ -217,22 +216,6 @@ def _parse_action_and_input(text: str) -> Tuple[Optional[str], Optional[str]]:
             )  # 파싱 실패로 되돌리지 않고 종료로 넘김
 
         return tool, action_input    
-
-# def _parse_action_and_input(text: str) -> Tuple[Optional[str], Optional[str]]:
-#     m_act = ACTION_RE.search(text)
-#     m_in = ACTION_INPUT_RE.search(text)
-#     if m_act and m_in:
-#         tool = m_act.group("tool").strip()
-#         action_input = m_in.group("input").strip()
-#         action_input_first_line = action_input.splitlines()[0].strip().strip('"').strip("'")
-#         return tool, action_input_first_line
-
-#     m_final = FINAL_ANSWER_RE.search(text)
-#     if m_final:
-#         return "__FINAL__", m_final.group("final").strip()
-
-#     return None, None
-
 
 def _observation_to_text(observation_obj) -> str:
     if isinstance(observation_obj, list):
